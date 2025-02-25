@@ -37,10 +37,10 @@ static void vBlinkTask(void *pvParameters) {
     (void)pvParameters;
     for (;;) {
         gpio_put(LED_PIN, 1);
-        printf("LED ON\n");
+        //printf("LED ON\n");
         vTaskDelay(pdMS_TO_TICKS(BLINK_DELAY_MS));
         gpio_put(LED_PIN, 0);
-        printf("LED OFF\n");
+        //printf("LED OFF\n");
         vTaskDelay(pdMS_TO_TICKS(BLINK_DELAY_MS));
     }
 }
