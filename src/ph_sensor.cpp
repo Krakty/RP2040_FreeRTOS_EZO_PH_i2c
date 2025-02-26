@@ -1,39 +1,48 @@
 #include "ph_sensor.h"
-#include "config.h"  // PH_READ_DELAY_MS, etc.
-#include "hardware/uart.h"  // uart_puts for prompts
-#include "cstdlib"  // atoi, atof
+#include "config.h"
+#include "hardware/uart.h"
+#include <cstdlib>
+#include <string.h>
 
-// Constructor
 PhSensor::PhSensor(i2c_inst_t* i2c, uint8_t address) 
     : m_device(address, "pH", i2c) {
-    // No additional init needed - Ezo_board handles I2C setup
+    m_mutex = xSemaphoreCreateMutex();
 }
 
-// Device Info & Status
+PhSensor::~PhSensor() {
+    vSemaphoreDelete(m_mutex);
+}
+
 void PhSensor::getInfo(char* buffer, size_t size) {
+    xSemaphoreTake(m_mutex, portMAX_DELAY);
     m_device.send_cmd("i");
-    vTaskDelay(pdMS_TO_TICKS(300));  // Datasheet: ~300ms
+    vTaskDelay(pdMS_TO_TICKS(300));
     m_device.receive_cmd(buffer, size);
+    xSemaphoreGive(m_mutex);
 }
 
 void PhSensor::getStatus(char* buffer, size_t size) {
+    xSemaphoreTake(m_mutex, portMAX_DELAY);
     m_device.send_cmd("Status");
     vTaskDelay(pdMS_TO_TICKS(300));
     m_device.receive_cmd(buffer, size);
+    xSemaphoreGive(m_mutex);
 }
 
-// pH Readings
 float PhSensor::readPh() {
+    xSemaphoreTake(m_mutex, portMAX_DELAY);
     m_device.send_read_cmd();
-    vTaskDelay(pdMS_TO_TICKS(PH_READ_DELAY_MS));  // 900ms min, config.h has 800ms - adjust to 1000ms?
+    vTaskDelay(pdMS_TO_TICKS(PH_READ_DELAY_MS));
+    float result = -1.0f;
     if (m_device.receive_read_cmd() == Ezo_board::SUCCESS) {
-        return m_device.get_last_received_reading();
+        result = m_device.get_last_received_reading();
     }
-    return -1.0f;  // Error indicator
+    xSemaphoreGive(m_mutex);
+    return result;
 }
 
-// Calibration
 bool PhSensor::calibrate(const char* mode, float value) {
+    xSemaphoreTake(m_mutex, portMAX_DELAY);
     char cmd[20];
     if (strcmp(mode, "clear") == 0) {
         snprintf(cmd, sizeof(cmd), "Cal,clear");
@@ -41,24 +50,26 @@ bool PhSensor::calibrate(const char* mode, float value) {
         snprintf(cmd, sizeof(cmd), "Cal,%s,%.2f", mode, value);
     }
     m_device.send_cmd(cmd);
-    vTaskDelay(pdMS_TO_TICKS(1000));  // ~1s per datasheet
+    vTaskDelay(pdMS_TO_TICKS(1000));
     char response[10];
     m_device.receive_cmd(response, sizeof(response));
+    xSemaphoreGive(m_mutex);
     return response[0] == '1';
 }
 
 int PhSensor::getCalibrationStatus() {
+    xSemaphoreTake(m_mutex, portMAX_DELAY);
     char response[10];
     m_device.send_cmd("Cal,?");
     vTaskDelay(pdMS_TO_TICKS(300));
     m_device.receive_cmd(response, sizeof(response));
-    if (response[0] == '?') {
-        return atoi(response + 5);  // "?Cal,<n>" -> extract n
-    }
-    return 0;  // Default: uncalibrated
+    int result = (response[0] == '?') ? atoi(response + 5) : 0;
+    xSemaphoreGive(m_mutex);
+    return result;
 }
 
 void PhSensor::getSlope(float& acidPercent, float& basePercent, float& mVOffset) {
+    xSemaphoreTake(m_mutex, portMAX_DELAY);
     char response[32];
     m_device.send_cmd("Slope,?");
     vTaskDelay(pdMS_TO_TICKS(300));
@@ -70,59 +81,67 @@ void PhSensor::getSlope(float& acidPercent, float& basePercent, float& mVOffset)
         basePercent = 0.0f;
         mVOffset = 0.0f;
     }
+    xSemaphoreGive(m_mutex);
 }
 
-// Temperature Compensation
 bool PhSensor::setTemperatureCompensation(float temp) {
+    xSemaphoreTake(m_mutex, portMAX_DELAY);
     char cmd[10];
     snprintf(cmd, sizeof(cmd), "T,%.1f", temp);
     m_device.send_cmd(cmd);
     vTaskDelay(pdMS_TO_TICKS(300));
     char response[10];
     m_device.receive_cmd(response, sizeof(response));
+    xSemaphoreGive(m_mutex);
     return response[0] == '1';
 }
 
 float PhSensor::getTemperatureCompensation() {
+    xSemaphoreTake(m_mutex, portMAX_DELAY);
     char response[10];
     m_device.send_cmd("T,?");
     vTaskDelay(pdMS_TO_TICKS(300));
     m_device.receive_cmd(response, sizeof(response));
-    if (response[0] == '?') {
-        return atof(response + 3);  // "?T,<n>" -> extract n
-    }
-    return 0.0f;
+    float result = (response[0] == '?') ? atof(response + 3) : 0.0f;
+    xSemaphoreGive(m_mutex);
+    return result;
 }
 
-// LED Control
 bool PhSensor::setLed(bool on) {
+    xSemaphoreTake(m_mutex, portMAX_DELAY);
     m_device.send_cmd(on ? "L,1" : "L,0");
     vTaskDelay(pdMS_TO_TICKS(300));
     char response[10];
     m_device.receive_cmd(response, sizeof(response));
+    xSemaphoreGive(m_mutex);
     return response[0] == '1';
 }
 
 bool PhSensor::getLedState() {
+    xSemaphoreTake(m_mutex, portMAX_DELAY);
     char response[10];
     m_device.send_cmd("L,?");
     vTaskDelay(pdMS_TO_TICKS(300));
     m_device.receive_cmd(response, sizeof(response));
-    return (response[0] == '?' && response[3] == '1');
+    bool result = (response[0] == '?' && response[3] == '1');
+    xSemaphoreGive(m_mutex);
+    return result;
 }
 
 void PhSensor::find() {
+    xSemaphoreTake(m_mutex, portMAX_DELAY);
     m_device.send_cmd("Find");
-    vTaskDelay(pdMS_TO_TICKS(300));  // Blinks for ~10s async
-    // No response expected
+    vTaskDelay(pdMS_TO_TICKS(300));
+    xSemaphoreGive(m_mutex);
 }
 
-// Configuration (Risky Ones)
 bool PhSensor::setBaud(uint32_t baud) {
+    xSemaphoreTake(m_mutex, portMAX_DELAY);
     char cmd[15];
     snprintf(cmd, sizeof(cmd), "Baud,%lu", baud);
     m_device.send_cmd(cmd);
-    vTaskDelay(pdMS_TO_TICKS(300));  // Device restarts
+    vTaskDelay(pdMS_TO_TICKS(300));
+    xSemaphoreGive(m_mutex);
     return true;  // No response - assume success
 }
 
@@ -136,9 +155,11 @@ bool PhSensor::setBaudWithConfirm(uint32_t baud) {
 }
 
 bool PhSensor::factoryReset() {
+    xSemaphoreTake(m_mutex, portMAX_DELAY);
     m_device.send_cmd("Factory");
-    vTaskDelay(pdMS_TO_TICKS(300));  // Device restarts
-    return true;  // No response
+    vTaskDelay(pdMS_TO_TICKS(300));
+    xSemaphoreGive(m_mutex);
+    return true;
 }
 
 bool PhSensor::factoryResetWithConfirm() {
@@ -149,10 +170,12 @@ bool PhSensor::factoryResetWithConfirm() {
 }
 
 bool PhSensor::setProtocolLock(bool lock) {
+    xSemaphoreTake(m_mutex, portMAX_DELAY);
     m_device.send_cmd(lock ? "Plock,1" : "Plock,0");
     vTaskDelay(pdMS_TO_TICKS(300));
     char response[10];
     m_device.receive_cmd(response, sizeof(response));
+    xSemaphoreGive(m_mutex);
     return response[0] == '1';
 }
 
@@ -164,12 +187,14 @@ bool PhSensor::setProtocolLockWithConfirm(bool lock) {
 }
 
 bool PhSensor::setI2cAddress(uint8_t address) {
+    xSemaphoreTake(m_mutex, portMAX_DELAY);
     char cmd[10];
     snprintf(cmd, sizeof(cmd), "I2C,%u", address);
     m_device.send_cmd(cmd);
     vTaskDelay(pdMS_TO_TICKS(300));
     char response[10];
     m_device.receive_cmd(response, sizeof(response));
+    xSemaphoreGive(m_mutex);
     return response[0] == '1';
 }
 
@@ -183,63 +208,65 @@ bool PhSensor::setI2cAddressWithConfirm(uint8_t address) {
 }
 
 bool PhSensor::setName(const char* name) {
+    xSemaphoreTake(m_mutex, portMAX_DELAY);
     char cmd[20];
     snprintf(cmd, sizeof(cmd), "Name,%s", name);
     m_device.send_cmd(cmd);
     vTaskDelay(pdMS_TO_TICKS(300));
     char response[10];
     m_device.receive_cmd(response, sizeof(response));
+    xSemaphoreGive(m_mutex);
     return response[0] == '1';
 }
 
-// Calibration Data
 void PhSensor::exportCalibration(char* buffer, size_t& size) {
+    xSemaphoreTake(m_mutex, portMAX_DELAY);
     m_device.send_cmd("Export");
     vTaskDelay(pdMS_TO_TICKS(300));
     m_device.receive_cmd(buffer, size);
-    // Note: Multi-line response - buffer must be large enough (~100 bytes)
+    xSemaphoreGive(m_mutex);
 }
 
 bool PhSensor::importCalibration(const char* data) {
+    xSemaphoreTake(m_mutex, portMAX_DELAY);
     char cmd[100];
     snprintf(cmd, sizeof(cmd), "Import,%s", data);
     m_device.send_cmd(cmd);
     vTaskDelay(pdMS_TO_TICKS(300));
     char response[10];
     m_device.receive_cmd(response, sizeof(response));
+    xSemaphoreGive(m_mutex);
     return response[0] == '1';
 }
 
-// Power Management
 void PhSensor::sleep() {
+    xSemaphoreTake(m_mutex, portMAX_DELAY);
     m_device.send_cmd("Sleep");
-    // No delay - instant shutdown
+    xSemaphoreGive(m_mutex);
 }
 
-// Custom (Placeholder)
 bool PhSensor::enableExtendedScale(bool enable) {
-    // Placeholder - not in datasheet, assume custom command
-    return true;  // TBD
+    xSemaphoreTake(m_mutex, portMAX_DELAY);
+    // Placeholder - custom command TBD
+    xSemaphoreGive(m_mutex);
+    return true;  // Assume success until defined
 }
 
-// Private Helper
 bool PhSensor::confirmAction(const char* warning) {
-    // Print warning to UART1 (assuming CLI context - refine later with Hardware*)
     uart_puts(uart1, warning);
     uart_puts(uart1, "\r\n");
 
-    // Wait for 'y' or 'n' - 10s timeout
     TickType_t start = xTaskGetTickCount();
     char response;
     while (xTaskGetTickCount() - start < pdMS_TO_TICKS(10000)) {
         if (uart_is_readable(uart1)) {
             response = uart_getc(uart1);
-            uart_putc(uart1, response);  // Echo back
+            uart_putc(uart1, response);
             uart_puts(uart1, "\r\n");
             if (response == 'y' || response == 'Y') return true;
             if (response == 'n' || response == 'N') return false;
         }
-        vTaskDelay(pdMS_TO_TICKS(10));  // Small delay to avoid busy-wait
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
     uart_puts(uart1, "Timeout - canceled\r\n");
     return false;

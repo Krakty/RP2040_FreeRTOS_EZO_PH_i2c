@@ -1,17 +1,19 @@
 #ifndef PH_SENSOR_H
 #define PH_SENSOR_H
 
-#include "Ezo_i2c.h"        // Ezo_board class
-#include "hardware/i2c.h"   // i2c_inst_t
-#include "pico/stdlib.h"    // stdio, bool, atoi, atof
+#include "Ezo_i2c.h"
+#include "hardware/i2c.h"
+#include "pico/stdlib.h"
 extern "C" {
-    #include "FreeRTOS.h"   // FreeRTOS base
-    #include "task.h"       // vTaskDelay, pdMS_TO_TICKS
+    #include "FreeRTOS.h"
+    #include "task.h"
+    #include "semphr.h"  // SemaphoreHandle_t
 }
 
 class PhSensor {
 public:
     PhSensor(i2c_inst_t* i2c, uint8_t address);
+    ~PhSensor();
     void getInfo(char* buffer, size_t size);
     void getStatus(char* buffer, size_t size);
     float readPh();
@@ -39,6 +41,7 @@ public:
 
 private:
     Ezo_board m_device;
+    SemaphoreHandle_t m_mutex;  // Mutex for I2C sync
     bool confirmAction(const char* warning);
 };
 
