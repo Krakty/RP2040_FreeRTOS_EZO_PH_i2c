@@ -29,4 +29,4 @@ target_include_directories(ezo_i2c_lib PUBLIC
 target_link_libraries(ezo_i2c_lib PUBLIC pico_stdlib hardware_i2c)
 
 # Optionally, if you want to generate additional output files for debugging/library analysis:
-# pico_add_extra_outputs(ezo_i2c_lib)
+#pico_add_extra_outputs(ezo_i2c_lib)
