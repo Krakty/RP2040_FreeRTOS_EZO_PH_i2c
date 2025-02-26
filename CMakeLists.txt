@@ -52,6 +52,9 @@ add_executable(RP2040_FRTOS_EZO_PH_i2c
     src/main.cpp
     src/freertos_hooks.cpp
     src/hardware.cpp
+    src/blink_task.cpp
+    src/ph_sensor.cpp
+    src/sensor_task.cpp
 )
 
 target_include_directories(RP2040_FRTOS_EZO_PH_i2c PRIVATE
