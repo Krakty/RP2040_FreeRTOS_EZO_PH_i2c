@@ -51,31 +51,31 @@
 #define PH_CLI_SCROLL_PADDING "\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n"  // 10 lines
 
 #define PH_CLI_SAFE_DISPLAY \
-    "+----------------------------------------------------+\r\n" \
-    "| EZO pH CLI Status                                  |\r\n" \
-    "+----------------------------------------------------+\r\n" \
-    "  PH:READ                            Read pH value    \r\n" \
-    "  PH:CAL,<type> (mid,low,high,clear) Calibrate       \r\n" \
-    "  PH:LED,<n> (ON,OFF,?)              LED on/off      \r\n" \
-    "  PH:FIND                            Locate device    \r\n" \
-    "  PH:SLOPE                           Calibration slope\r\n" \
-    "  PH:TEMP,<n>                        Set temp comp    \r\n" \
-    "  PH:STATUS                          Device status    \r\n" \
-    "  PH:INFO                            Device info      \r\n" \
-    "  PH:DANGER                          Enter danger mode\r\n" \
-    "  PH:HELP                            Show this        \r\n" \
-    "+----------------------------------------------------+\r\n"
+    "+------------------------------------------------------+\r\n" \
+    "| EZO pH CLI Status                                    |\r\n" \
+    "+------------------------------------------------------+\r\n" \
+    "  PH:READ                            Read pH value     \r\n" \
+    "  PH:CAL,<type> (mid,low,high,clear) Calibrate         \r\n" \
+    "  PH:LED,<n> (ON,OFF,?)              LED on/off        \r\n" \
+    "  PH:FIND                            Locate device     \r\n" \
+    "  PH:SLOPE                           Calibration slope \r\n" \
+    "  PH:TEMP,<n>                        Set temp comp     \r\n" \
+    "  PH:STATUS                          Device status     \r\n" \
+    "  PH:INFO                            Device info       \r\n" \
+    "  PH:DANGER                          Enter danger mode \r\n" \
+    "  PH:HELP                            Show this         \r\n" \
+    "+------------------------------------------------------+\r\n"
 
 #define PH_CLI_DANGER_DISPLAY \
-    "+----------------------------------------------------+\r\n" \
-    "| EZO pH CLI - Danger Mode                           |\r\n" \
-    "+----------------------------------------------------+\r\n" \
+    "+------------------------------------------------------+\r\n" \
+    "| EZO pH CLI - Danger Mode                             |\r\n" \
+    "+------------------------------------------------------+\r\n" \
     "  PH:BAUD,<n>                        Set baud rate    \r\n" \
     "  PH:FACTORY                         Factory reset    \r\n" \
     "  PH:PLOCK,<n> (0,1)                 Lock protocol    \r\n" \
     "  PH:I2C,<n>                         Set I2C addr     \r\n" \
     "  EXIT                               Back to safe mode\r\n" \
-    "+----------------------------------------------------+\r\n"
+    "+------------------------------------------------------+\r\n"
 
 #define PH_CLI_SAFE_PROMPT    "PH_PROG_MODE:>"
 #define PH_CLI_DANGER_PROMPT  "PH_PROG_DANGER_MODE:>"
