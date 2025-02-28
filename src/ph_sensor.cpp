@@ -271,3 +271,8 @@ bool PhSensor::confirmAction(const char* warning) {
     uart_puts(uart1, "Timeout - canceled\r\n");
     return false;
 }
+// [Existing includes and methods unchanged]
+
+bool PhSensor::resetTemperatureCompensation() {
+    return setTemperatureCompensation(25.0f);  // Default 25°C per EZO spec
+}

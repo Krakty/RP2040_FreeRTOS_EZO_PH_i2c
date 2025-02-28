@@ -16,16 +16,17 @@ extern "C" {
 
 extern "C" int main(void) {
     Hardware hw;
-    hw.initStdio();
-    hw.initLedGpio();
-    hw.initI2c0();
-    hw.initUart1();
+    hw.initStdio();    // UART0/USB for CLI & pH
+    hw.initLedGpio();  // GPIO 25
+    hw.initI2c0();     // GPIO 4/5 for pH sensor
 
     PhSensor phSensor(hw.getI2c0(), PH_SENSOR_I2C_ADDRESS);
-    CliTaskParams cliParams = { &phSensor, &hw };
+    volatile bool suspendPh = false;  // Shared suspend flag
+    struct { PhSensor* sensor; volatile bool* suspendPh; } phParams = { &phSensor, &suspendPh };
+    CliTaskParams cliParams = { &phSensor, &hw, &suspendPh };
 
     xTaskCreate(vBlinkTask, "Blink", configMINIMAL_STACK_SIZE, NULL, TASK_PRIORITY, NULL);
-    xTaskCreate(vPhSensorTask, "PHSensor", configMINIMAL_STACK_SIZE * 2, &phSensor, TASK_PRIORITY, NULL);
+    xTaskCreate(vPhSensorTask, "PHSensor", configMINIMAL_STACK_SIZE * 2, (void*)&phParams, TASK_PRIORITY, NULL);
     xTaskCreate(vCliTask, "CLI", configMINIMAL_STACK_SIZE * 2, &cliParams, TASK_PRIORITY, NULL);
 
     printf("Starting FreeRTOS SMP scheduler\n");

@@ -7,7 +7,7 @@
 extern "C" {
     #include "FreeRTOS.h"
     #include "task.h"
-    #include "semphr.h"  // SemaphoreHandle_t
+    #include "semphr.h"
 }
 
 class PhSensor {
@@ -22,6 +22,7 @@ public:
     void getSlope(float& acidPercent, float& basePercent, float& mVOffset);
     bool setTemperatureCompensation(float temp);
     float getTemperatureCompensation();
+    bool resetTemperatureCompensation();  // New - reset to 25°C
     bool setLed(bool on);
     bool getLedState();
     void find();
@@ -41,7 +42,7 @@ public:
 
 private:
     Ezo_board m_device;
-    SemaphoreHandle_t m_mutex;  // Mutex for I2C sync
+    SemaphoreHandle_t m_mutex;
     bool confirmAction(const char* warning);
 };
 
